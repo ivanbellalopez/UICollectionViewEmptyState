@@ -76,65 +76,68 @@ SYNTHESIZE_ASC_OBJ_BLOCK(emptyState_view,
 });
 
 - (void) __empty_layoutSubviews {
-  [self __empty_layoutSubviews];
-
-  CGRect bounds = self.bounds;
-
-  NSUInteger totalItems = 0;
-  NSUInteger numberOfSections = 1;
-  if ([self.dataSource respondsToSelector:@selector(numberOfSectionsInCollectionView:)]) {
-    numberOfSections = [self.dataSource numberOfSectionsInCollectionView:self];
-  }
-
-  for (NSUInteger section = 0; section < numberOfSections; ++section) {
-    totalItems += [self.dataSource collectionView:self numberOfItemsInSection:section];
-  }
-
-  // section header respect requires UICollectionViewDelegateFlowLayout right now...
-  if (self.emptyState_view && self.emptyState_shouldRespectSectionHeader) {
-    UICollectionViewFlowLayout *layout = (id) self.collectionViewLayout;
-    NSAssert2([layout isKindOfClass:[UICollectionViewFlowLayout class]],
-              @"Only compatible with %@ when emptyState_shouldRespectSectionHeader = YES." \
-              " Cannot be used with %@",
-              NSStringFromClass([UICollectionViewFlowLayout class]),
-              NSStringFromClass([self.collectionViewLayout class]));
-
-
-    // is there actually a header to be displayed?
-    if (numberOfSections &&
-        [self.dataSource
-         respondsToSelector:@selector(collectionView:viewForSupplementaryElementOfKind:atIndexPath:)])
-    {
-      CGSize headerSize = layout.headerReferenceSize;
-
-      if ([self.delegate respondsToSelector:@selector(collectionView:layout:referenceSizeForHeaderInSection:)]) {
-        headerSize = [(id <UICollectionViewDelegateFlowLayout>) self.delegate
-                      collectionView:self
-                      layout:layout
-                      referenceSizeForHeaderInSection:0];
-      }
-
-      CGRect slice;
-      CGRectDivide(bounds, &slice, &bounds, headerSize.height, CGRectMinYEdge);
-    }
-  }
-
-  // always update frame
-  self.emptyState_view.frame = UIEdgeInsetsInsetRect(bounds, self.contentInset);
-
-  // view may already be animating
-  BOOL animating = [self.emptyState_view.layer.animationKeys containsObject:@"opacity"];
-
-  if (totalItems) {
-    // remove
-    if (self.emptyState_view.superview && !animating) {
-      [self __empty_layoutRemoveView];
-    }
-  } else {
-    if (!self.emptyState_view.superview && !animating) {
-      [self __empty_layoutAddViewItems:totalItems section:numberOfSections];
-    }
-  }
+	dispatch_async(dispatch_get_main_queue(), ^{
+		
+		[self __empty_layoutSubviews];
+		
+		CGRect bounds = self.bounds;
+		
+		NSUInteger totalItems = 0;
+		NSUInteger numberOfSections = 1;
+		if ([self.dataSource respondsToSelector:@selector(numberOfSectionsInCollectionView:)]) {
+			numberOfSections = [self.dataSource numberOfSectionsInCollectionView:self];
+		}
+		
+		for (NSUInteger section = 0; section < numberOfSections; ++section) {
+			totalItems += [self.dataSource collectionView:self numberOfItemsInSection:section];
+		}
+		
+		// section header respect requires UICollectionViewDelegateFlowLayout right now...
+		if (self.emptyState_view && self.emptyState_shouldRespectSectionHeader) {
+			UICollectionViewFlowLayout *layout = (id) self.collectionViewLayout;
+			NSAssert2([layout isKindOfClass:[UICollectionViewFlowLayout class]],
+					  @"Only compatible with %@ when emptyState_shouldRespectSectionHeader = YES." \
+					  " Cannot be used with %@",
+					  NSStringFromClass([UICollectionViewFlowLayout class]),
+					  NSStringFromClass([self.collectionViewLayout class]));
+			
+			
+			// is there actually a header to be displayed?
+			if (numberOfSections &&
+				[self.dataSource
+				 respondsToSelector:@selector(collectionView:viewForSupplementaryElementOfKind:atIndexPath:)])
+			{
+				CGSize headerSize = layout.headerReferenceSize;
+				
+				if ([self.delegate respondsToSelector:@selector(collectionView:layout:referenceSizeForHeaderInSection:)]) {
+					headerSize = [(id <UICollectionViewDelegateFlowLayout>) self.delegate
+								  collectionView:self
+								  layout:layout
+								  referenceSizeForHeaderInSection:0];
+				}
+				
+				CGRect slice;
+				CGRectDivide(bounds, &slice, &bounds, headerSize.height, CGRectMinYEdge);
+			}
+		}
+		
+		// always update frame
+		self.emptyState_view.frame = UIEdgeInsetsInsetRect(bounds, self.contentInset);
+		
+		// view may already be animating
+		BOOL animating = [self.emptyState_view.layer.animationKeys containsObject:@"opacity"];
+		
+		if (totalItems) {
+			// remove
+			if (self.emptyState_view.superview && !animating) {
+				[self __empty_layoutRemoveView];
+			}
+		} else {
+			if (!self.emptyState_view.superview && !animating) {
+				[self __empty_layoutAddViewItems:totalItems section:numberOfSections];
+			}
+		}
+	});
 }
 
 - (void) __empty_layoutAddViewItems:(NSUInteger) totalItems
